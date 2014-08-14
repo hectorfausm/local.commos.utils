@@ -1,9 +1,8 @@
 package commons.utils.db;
-import commons.utils.Logs;
 import commons.utils.exceptions.UtilExceptions;
 import commons.utils.exceptions.UtilsException;
 
-public enum DBTypes implements Logs{
+public enum DBTypes{
 	
 	MYSQL("com.mysql.jdbc.Driver","jdbc:mysql:","//","/");
 	
@@ -39,7 +38,6 @@ public enum DBTypes implements Logs{
 			 res = DBTypes.valueOf(value);
 		}catch(IllegalArgumentException e){
 			UtilExceptions ex = UtilExceptions.NO_TYPE_FOUND;
-			DBHANDLER_LOG.error(ex);
 			throw new UtilsException(ex.getErrorCode(), ex.getErrorMessage(),e);
 		}
 		return res;

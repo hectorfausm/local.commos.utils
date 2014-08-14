@@ -5,7 +5,7 @@ import java.math.BigDecimal;
 /**
  * Clase que contiene métodos de comparación
  * */
-public class Comparators implements Logs{
+public class Comparators{
 	
 	/**
 	 * Método que identifica si un número se encuentra entre dos límites

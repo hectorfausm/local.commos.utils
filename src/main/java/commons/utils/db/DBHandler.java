@@ -7,8 +7,8 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Types;
 
-import commons.utils.Logs;
 import commons.utils.exceptions.UtilExceptions;
 import commons.utils.exceptions.UtilsException;
 
@@ -20,7 +20,7 @@ import java.util.Map;
 /**
  * Clase para manejadora de Bases de datos
  * */
-public class DBHandler implements Logs{
+public class DBHandler{
 	
 	private DBTypes dbType;
 	private String dir,dbName,user,pass;
@@ -46,7 +46,6 @@ public class DBHandler implements Logs{
 			Class.forName(this.dbType.getDriverClass());
 		} catch (ClassNotFoundException e) {
 			UtilExceptions ex = UtilExceptions.NO_DRIVER_FOUND;
-			DBHANDLER_LOG.error(ex);
 			throw new UtilsException(ex.getErrorCode(), ex.getErrorMessage(), e);
 		}
 	}
@@ -88,7 +87,6 @@ public class DBHandler implements Logs{
 					 +dbName,user,pass);
 		} catch (SQLException e) {
 			UtilExceptions ex = UtilExceptions.CONECT_EXCEPTION;
-			DBHANDLER_LOG.error(ex);
 			throw new UtilsException(ex.getErrorCode(), ex.getErrorMessage(), e);
 		}
 	}
@@ -101,7 +99,6 @@ public class DBHandler implements Logs{
 			conn.close();
 		} catch (SQLException e) {
 			UtilExceptions ex = UtilExceptions.CLOSE_DB_EXCEPTION;
-			DBHANDLER_LOG.error(ex);
 			throw new UtilsException(ex.getErrorCode(), ex.getErrorMessage(), e);
 		}
 	}
@@ -118,7 +115,6 @@ public class DBHandler implements Logs{
 			st.executeUpdate(query);
 		} catch (SQLException e) {
 			UtilExceptions ex = UtilExceptions.QUERY_UPDATE_ERROR;
-			DBHANDLER_LOG.error(ex);
 			throw new UtilsException(ex.getErrorCode(), ex.getErrorMessage(), e);
 		}
 	}
@@ -151,7 +147,6 @@ public class DBHandler implements Logs{
 			sizeCount = rsCount.getLong(1);
 		} catch (SQLException e) {
 			UtilExceptions ex = UtilExceptions.EXECUTE_QUERY;
-			DBHANDLER_LOG.error(ex);
 			throw new UtilsException(ex.getErrorCode(), ex.getErrorMessage(), e);
 		}
 		
@@ -159,14 +154,14 @@ public class DBHandler implements Logs{
 	}
 	
 	/**
-	 * M�todo que llama un Procedure PL/SQL de la Base de datos
+	 * Método que llama a una procedimiento interna de la base de datos
 	 * @param Mapa de objetos con los par�metros del PL/SQL, Siendo la clave el nombre del par�metro
 	 * en el Porcedimiento PL/SQL y value su valor.
 	 * @param Mapa de objetos con los par�metros out del PL/SQL, siendo key el nombre del parametro
 	 * en el Procedure PL/SQL y value su valor o tipo
 	 * @throws SiaException 
 	 * */
-	public Map<String,Object> callPL_SQLProcedures(String nameFunction, Map<String,Object> params,
+	public Map<String,Object> callInternProcedure(String nameFunction, Map<String,Object> params,
  Map<String, Object> outs)
 			throws UtilsException {
 
@@ -196,9 +191,12 @@ public class DBHandler implements Logs{
 		try {
 			vStatement = conn.prepareCall(prepareFunction);
 		} catch (SQLException e) {
+			UtilExceptions ex = UtilExceptions.PREPARE_PROCEDURE_ERROR;
 			throw new UtilsException(
-					UtilExceptions.PREPARE_FUNCTION_ERROR.getErrorMessage()
-							+ prepareFunction + " no es correcta", e);
+				ex.getErrorCode(),
+				ex.getErrorMessage()+ prepareFunction + " no es correcta", 
+				e
+			);
 		}
 
 		// Introducir paramatros
@@ -206,9 +204,10 @@ public class DBHandler implements Logs{
 			try {
 				vStatement.setObject(key, params.get(key));
 			} catch (SQLException e) {
-				throw new SiaException(
-						ClientSynchroConstants.GRAL.EXCEPTION.INTRODUCE_PARAMETERS_ERROR,
-						"Error al introducir par�metros en la funci�n", e);
+				UtilExceptions ex = UtilExceptions.INTRODUCE_PARAMETERS_ERROR;
+				throw new UtilsException(
+						ex.getErrorCode(),
+						ex.getErrorMessage()+" "+prepareFunction, e);
 			}
 		}
 
@@ -227,10 +226,10 @@ public class DBHandler implements Logs{
 				}
 
 			} catch (SQLException e) {
-				throw new SiaException(
-						ClientSynchroConstants.GRAL.EXCEPTION.INTRODUCE_OUTS_ERROR,
-						"Error al introducir par�metros de salida en la funci�n",
-						e);
+				UtilExceptions ex = UtilExceptions.INTRODUCE_PARAMETERS_ERROR;
+				throw new UtilsException(
+						ex.getErrorCode(),
+						ex.getErrorMessage()+" "+prepareFunction+" KEY: "+key, e);
 			}
 		}
 
@@ -238,9 +237,10 @@ public class DBHandler implements Logs{
 		try {
 			vStatement.executeUpdate();
 		} catch (SQLException e) {
-			throw new SiaException(
-					ClientSynchroConstants.GRAL.EXCEPTION.EXECUTE_FUNCTION_ERROR,
-					"Error al ejecutar la funci�n", e);
+			UtilExceptions ex = UtilExceptions.CALL_PROCEDURE_ERROR;
+			throw new UtilsException(
+					ex.getErrorCode(),
+					ex.getErrorMessage()+" "+prepareFunction, e);
 		}
 
 		// Devolviendo Output
@@ -248,9 +248,10 @@ public class DBHandler implements Logs{
 			try {
 				res.put(key, vStatement.getObject(key));
 			} catch (SQLException e) {
-				throw new SiaException(
-						ClientSynchroConstants.GRAL.EXCEPTION.OBTAIN_OUTS_ERROR,
-						"Error al obtener los resultados de la funci�n", e);
+				UtilExceptions ex = UtilExceptions.OBTAINING_OUTPUT_PROCEDURE_ERROR;
+				throw new UtilsException(
+						ex.getErrorCode(),
+						ex.getErrorMessage()+" "+prepareFunction, e);
 			}
 		}
 
@@ -306,11 +307,9 @@ public class DBHandler implements Logs{
 			st = (Statement) conn.createStatement();
 		} catch (SQLException e) {
 			UtilExceptions ex = UtilExceptions.CREATE_RESULT_SATATEMENT;
-			DBHANDLER_LOG.error(ex);
 			throw new UtilsException(ex.getErrorCode(), ex.getErrorMessage(), e);
 		}
 		return st;
 	}
-	
 	//-----------------------------  METODOS PRIVADOS  --------------------------------------//
 }

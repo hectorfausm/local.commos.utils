@@ -92,32 +92,6 @@ public class DBHandler {
 	// +++++++++++++++++++++++++++++++++++++++++++++++//
 
 	/**
-	 * Método que habiita la conexión con la base de datos
-	 * */
-	public void conect() throws UtilsException {
-		try {
-			this.conn = DriverManager.getConnection(
-					this.dbType.getIdetifyString() + dbType.getFirstSeparator()
-							+ dir + dbType.getSeparator() + dbName, user, pass);
-		} catch (SQLException e) {
-			UtilExceptions ex = UtilExceptions.CONECT_EXCEPTION;
-			throw new UtilsException(ex.getErrorCode(), ex.getErrorMessage(), e);
-		}
-	}
-
-	/**
-	 * Método que cierra la conexión con la base de datos
-	 * */
-	public void close() throws UtilsException {
-		try {
-			conn.close();
-		} catch (SQLException e) {
-			UtilExceptions ex = UtilExceptions.CLOSE_DB_EXCEPTION;
-			throw new UtilsException(ex.getErrorCode(), ex.getErrorMessage(), e);
-		}
-	}
-
-	/**
 	 * Métofo que permite actualización de filas en la base de datos a partir de
 	 * una query.
 	 * 
@@ -125,6 +99,7 @@ public class DBHandler {
 	 *            Query para al actualización
 	 * */
 	public void update(String query) throws UtilsException {
+		conect();
 		Statement st = obtainStatement();
 
 		try {
@@ -133,6 +108,7 @@ public class DBHandler {
 			UtilExceptions ex = UtilExceptions.QUERY_UPDATE_ERROR;
 			throw new UtilsException(ex.getErrorCode(), ex.getErrorMessage(), e);
 		}
+		disconect();
 	}
 
 	/**
@@ -148,6 +124,7 @@ public class DBHandler {
 	 * */
 	public DBHandlerSelectElemet select(String query, int offset, int rowCount)
 			throws UtilsException {
+		conect();
 		Statement st = obtainStatement();
 		List<Map<String, Object>> res = new ArrayList<Map<String, Object>>();
 		long sizeCount = 0;
@@ -172,10 +149,43 @@ public class DBHandler {
 			UtilExceptions ex = UtilExceptions.EXECUTE_QUERY;
 			throw new UtilsException(ex.getErrorCode(), ex.getErrorMessage(), e);
 		}
-
+		disconect();
 		return new DBHandlerSelectElemet(res, sizeCount);
 	}
+	
+	/**
+	 * Método que llama a una procedimiento interna de la base de datos
+	 * 
+	 * @param nameFunction
+	 *            Mapa de objetos con los par�metros del PL/SQL, Siendo la clave
+	 *            el nombre del par�metro en el Porcedimiento PL/SQL y value su
+	 *            valor.
+	 * @throws SiaException
+	 * */
+	public Map<String, Object> callInternProcedure(String nameFunction)
+			throws UtilsException {
+		return (Map<String, Object>)callInternProcedure(nameFunction, null, null, null, null);
+	}
 
+	/**
+	 * Método que llama a una procedimiento interna de la base de datos
+	 * 
+	 * @param nameFunction
+	 *            Mapa de objetos con los par�metros del PL/SQL, Siendo la clave
+	 *            el nombre del par�metro en el Porcedimiento PL/SQL y value su
+	 *            valor.
+	 * @param params
+	 *            Mapa de objetos con los par�metros out del PL/SQL, siendo key
+	 *            el nombre del parametro en el Procedure PL/SQL y value su
+	 *            valor o tipo
+	 * @throws SiaException
+	 * */
+	public Map<String, Object> callInternProcedure(String nameFunction,
+			Map<String, Object> params)
+			throws UtilsException {
+		return (Map<String, Object>)callInternProcedure(nameFunction, params, null, null, null);
+	}
+	
 	/**
 	 * Método que llama a una procedimiento interna de la base de datos
 	 * 
@@ -194,7 +204,7 @@ public class DBHandler {
 	public Map<String, Object> callInternProcedure(String nameFunction,
 			Map<String, Object> params, Map<String, Object> outs)
 			throws UtilsException {
-		return callInternProcedure(nameFunction, params, outs, null, null);
+		return (Map<String, Object>)callInternProcedure(nameFunction, params, outs, null, null);
 	}
 	
 	/**
@@ -217,7 +227,22 @@ public class DBHandler {
 	public Map<String, Object> callInternProcedure(String nameFunction,
 			Map<String, Object> params, Map<String, Object> outs, Map<String,Object> inouts)
 			throws UtilsException {
-		return callInternProcedure(nameFunction, params, outs, inouts, null);
+		return (Map<String, Object>)callInternProcedure(nameFunction, params, outs, inouts, null);
+	}
+	
+	/**
+	 * Método que llama a una procedimiento interna de la base de datos
+	 * 
+	 * @param nameFunction
+	 *            Mapa de objetos con los par�metros del PL/SQL, Siendo la clave
+	 *            el nombre del par�metro en el Porcedimiento PL/SQL y value su
+	 *            valor.
+	 * @param returnType Tipo ({@link Types} constantes) del valor retornado
+	 * @throws SiaException
+	 * */
+	public Object callInternFunction(String nameFunction, Integer returnType)
+			throws UtilsException {
+		return callInternProcedure(nameFunction, null, null, null, returnType);
 	}
 	
 	/**
@@ -231,13 +256,10 @@ public class DBHandler {
 	 *            Mapa de objetos con los par�metros out del PL/SQL, siendo key
 	 *            el nombre del parametro en el Procedure PL/SQL y value su
 	 *            valor o tipo
-	 * @param outs
-	 *            Mapa objetos de salida
-	 * @param inouts
-	 *            Mapa objetos de salida y intrada
+	 * @param returnType Tipo ({@link Types} constantes) del valor retornado
 	 * @throws SiaException
 	 * */
-	public Map<String, Object> callInternFunction(String nameFunction,
+	public Object callInternFunction(String nameFunction,
 			Map<String, Object> params, Integer returnType)
 			throws UtilsException {
 		return callInternProcedure(nameFunction, params, null, null, returnType);
@@ -286,12 +308,26 @@ public class DBHandler {
 			return totalResults;
 		}
 	}
+	
+	public void setDbType(DBTypes dbType) {
+		this.dbType = dbType;
+	}
+	public void setDbName(String dbName) {
+		this.dbName = dbName;
+	}
+	public void setDir(String dir) {
+		this.dir = dir;
+	}
+	public void setPass(String pass) {
+		this.pass = pass;
+	}
+	public void setUser(String user) {
+		this.user = user;
+	}
 
-	// ------------------------------ API
-	// ---------------------------------------------------//
+	// ------------------------------ API ------------------------------------//
 
-	// ++++++++++++++++++++++++++++++ METODOS PRIVADOS
-	// ++++++++++++++++++++++++++++++++++++++//
+	// ++++++++++++++++++++++++++++++ METODOS PRIVADOS  ++++++++++++++++++++++//
 
 	/**
 	 * Método que obtiene un {@link Statement} con la base de datos.
@@ -327,13 +363,13 @@ public class DBHandler {
 	 * @param returnType
 	 *            Determina el tipo de return de una función de la base de datos, si se trata de
 	 *            un procedimiento este parámetro debe ser null
-	 * @throws SiaException
+	 * @throws UtilsException
 	 * */
-	private Map<String, Object> callInternProcedure(String nameFunction,
-			Map<String, Object> params, Map<String, Object> outs,
-			Map<String, Object> inouts, Integer returnType)
+	private Object callInternProcedure(String nameFunction,	Map<String, Object> params,
+			Map<String, Object> outs,Map<String, Object> inouts, Integer returnType)
 			throws UtilsException {
-
+		
+		conect();
 		Map<String, Object> res = new HashMap<String, Object>();
 
 		// PREPARE PL/SQL FUNCTION CALL ("?" IS A PLACEHOLDER FOR RETURN
@@ -459,7 +495,7 @@ public class DBHandler {
 		// Construyendo la salida de datos
 		if (returnType!=null) {
 			try {
-				res.put("return", vStatement.getObject(1));
+				return vStatement.getObject(1);
 			} catch (SQLException e) {
 				UtilExceptions ex = UtilExceptions.OBTAINING_RETURN_VALUE;
 				throw new UtilsException(ex.getErrorCode(),
@@ -489,8 +525,34 @@ public class DBHandler {
 				}
 			}
 		}
+		disconect();
 		return res;
 	}
-	// ----------------------------- METODOS PRIVADOS
-	// --------------------------------------//
+	
+	/**
+	 * Método que habilita la conexión con la base de datos
+	 * */
+	private void conect() throws UtilsException {
+		try {
+			this.conn = DriverManager.getConnection(
+					this.dbType.getIdetifyString() + dbType.getFirstSeparator()
+							+ dir + dbType.getSeparator() + dbName, user, pass);
+		} catch (SQLException e) {
+			UtilExceptions ex = UtilExceptions.CONECT_EXCEPTION;
+			throw new UtilsException(ex.getErrorCode(), ex.getErrorMessage(), e);
+		}
+	}
+
+	/**
+	 * Método que cierra la conexión con la base de datos
+	 * */
+	private void disconect() throws UtilsException {
+		try {
+			conn.close();
+		} catch (SQLException e) {
+			UtilExceptions ex = UtilExceptions.CLOSE_DB_EXCEPTION;
+			throw new UtilsException(ex.getErrorCode(), ex.getErrorMessage(), e);
+		}
+	}
+	// ----------------------------- METODOS PRIVADOS  ------------------------------//
 }

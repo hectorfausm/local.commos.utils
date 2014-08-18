@@ -17,6 +17,8 @@ public enum UtilExceptions {
 	INTRODUCE_PARAMETERS_ERROR("DB008","Error al introducir parámetros en la función"),
 	CALL_PROCEDURE_ERROR("DB009","Error producido al llamar al procedimiento almacenado"),
 	OBTAINING_OUTPUT_PROCEDURE_ERROR("DB010", "Error obtenido al obtener la salida del procedimiento almacenado"),
+	OBTAINING_RETURN_VALUE("DB012","Error al obtener el resultado de la función"),
+	RETURN_VALUE("DB011","Error al establecer el tipo del resultado de la función"),
 	
 	//Excepciones del manejador del fichero de propiedades
 	NO_FILE_PROPERTIES("FP001","EL fichero de propiedades no existe"),
